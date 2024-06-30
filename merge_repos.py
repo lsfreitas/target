@@ -1,4 +1,5 @@
 import os
+import requests
 import git
 
 def configure_git_identity():
@@ -27,6 +28,16 @@ def fetch_remote(repo, remote_name):
 def checkout_branch(repo, branch_name):
     repo.git.checkout(branch_name)
     print(f"Checked out to branch '{branch_name}'")
+
+def get_latest_commit_from_github(repo_url, branch_name, token):
+    api_url = f"https://api.github.com/repos/{repo_url}/commits/{branch_name}"
+    headers = {"Authorization": f"token {token}"}
+    response = requests.get(api_url, headers=headers)
+    response.raise_for_status()
+    return response.json()['sha']
+
+def get_latest_commit_hash(repo, branch_name):
+    return repo.git.rev_parse(f'{branch_name}')
 
 def merge_branches(repo, source_branch, target_branch):
     try:
@@ -61,10 +72,11 @@ def main():
     source_repo_url = os.getenv('SOURCE_REPO_URL')
     target_branch = os.getenv('TARGET_BRANCH')
     source_branch = os.getenv('SOURCE_BRANCH')
+    github_token = os.getenv('GITHUB_TOKEN')
 
     # Validate environment variables
-    if not target_repo_url or not source_repo_url or not target_branch or not source_branch:
-        print("Error: TARGET_REPO_URL, SOURCE_REPO_URL, TARGET_BRANCH, and SOURCE_BRANCH environment variables must be set.")
+    if not target_repo_url or not source_repo_url or not target_branch or not source_branch or not github_token:
+        print("Error: TARGET_REPO_URL, SOURCE_REPO_URL, TARGET_BRANCH, SOURCE_BRANCH, and GITHUB_TOKEN environment variables must be set.")
         return
 
     # Define local paths for cloning repositories
@@ -83,6 +95,16 @@ def main():
 
     # Checkout the target branch
     checkout_branch(target_repo, target_branch)
+
+    # Get latest commit hashes
+    latest_source_commit = get_latest_commit_from_github(source_repo_url, source_branch, github_token)
+    target_commit_hash = get_latest_commit_hash(target_repo, target_branch)
+
+    # Check if there are changes in the source repository
+    if target_commit_hash == latest_source_commit:
+        print("No new changes to merge from source repository.")
+        remove_remote(target_repo, 'source_repo')
+        return
 
     # Merge the source repository into the target repository
     if merge_branches(target_repo, f'source_repo/{source_branch}', target_branch):
