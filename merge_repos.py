@@ -33,6 +33,11 @@ def create_new_branch(repo, branch_name):
     repo.git.checkout('-b', branch_name)
     print(f"Created and checked out to new branch '{branch_name}'")
 
+def commit_merge_conflict(repo, conflict_message):
+    repo.git.add(A=True)
+    repo.index.commit(conflict_message)
+    print("Committed merge conflict changes")
+
 def get_latest_commit_hash(repo, remote_name, branch_name):
     remote_branch = f"{remote_name}/{branch_name}"
     fetch_remote(repo, remote_name)
@@ -124,6 +129,7 @@ def main():
         # Create a new branch for the merge conflict
         conflict_branch = "merge-conflict-" + latest_source_commit[:7]
         create_new_branch(target_repo, conflict_branch)
+        commit_merge_conflict(target_repo, "Resolve merge conflicts")
         push_changes(target_repo, conflict_branch)
         # Create a pull request with the merge conflicts
         create_pull_request(github_token, target_repo_url, conflict_branch, target_branch, conflict_details)
