@@ -15,6 +15,43 @@ def clone_repo(repo_url, repo_path):
         repo.remotes.origin.pull()
         return repo
 
+def add_remote(repo, remote_name, remote_url):
+    if remote_name not in [remote.name for remote in repo.remotes]:
+        repo.create_remote(remote_name, remote_url)
+        print(f"Added {remote_name} as remote with URL {remote_url}")
+
+def fetch_remote(repo, remote_name):
+    repo.remotes[remote_name].fetch()
+    print(f"Fetched latest changes from {remote_name}")
+
+def checkout_branch(repo, branch_name):
+    repo.git.checkout(branch_name)
+    print(f"Checked out to branch '{branch_name}'")
+
+def merge_branches(repo, source_branch, target_branch):
+    try:
+        repo.git.merge(source_branch, allow_unrelated_histories=True)
+        print(f"Successfully merged '{source_branch}' into '{target_branch}'")
+    except git.exc.GitCommandError as e:
+        print(f"Error during merge: {e.stderr}")
+        print(f"stdout: {e.stdout}")
+        print(f"stderr: {e.stderr}")
+        return False
+    return True
+
+def push_changes(repo, branch_name):
+    try:
+        repo.remotes.origin.push(refspec=f'{branch_name}:{branch_name}')
+        print(f"Successfully pushed the merged changes to '{branch_name}'")
+    except git.exc.GitCommandError as e:
+        print(f"Error during push: {e.stderr}")
+        return False
+    return True
+
+def remove_remote(repo, remote_name):
+    repo.delete_remote(remote_name)
+    print(f"Removed remote '{remote_name}'")
+
 def main():
     # Configure Git user identity
     configure_git_identity()
@@ -35,44 +72,24 @@ def main():
     source_repo_path = "/tmp/source_repo"
 
     # Clone target repository
-    print(f"Cloning target repository from {target_repo_url} to {target_repo_path}")
     target_repo = clone_repo(target_repo_url, target_repo_path)
     print(f"Target repository cloned to {target_repo_path}")
 
-    # Add the source repository as a remote to the target repository using its remote URL
-    if 'source_repo' not in [remote.name for remote in target_repo.remotes]:
-        target_repo.create_remote('source_repo', source_repo_url)
-        print(f"Added source repository as remote 'source_repo'")
+    # Add the source repository as a remote to the target repository
+    add_remote(target_repo, 'source_repo', source_repo_url)
 
     # Fetch changes from the source repository
-    target_repo.remotes.source_repo.fetch()
-    print(f"Fetched latest changes from source repository")
+    fetch_remote(target_repo, 'source_repo')
 
     # Checkout the target branch
-    target_repo.git.checkout(target_branch)
-    print(f"Checked out to branch '{target_branch}' in target repository")
+    checkout_branch(target_repo, target_branch)
 
     # Merge the source repository into the target repository
-    try:
-        target_repo.git.merge(f'source_repo/{source_branch}', allow_unrelated_histories=True)
-        print(f"Successfully merged 'source_repo/{source_branch}' into '{target_branch}'")
-    except git.exc.GitCommandError as e:
-        print(f"Error during merge: {e.stderr}")
-        print(f"stdout: {e.stdout}")
-        print(f"stderr: {e.stderr}")
-        return
-
-    # Push the changes to the target repository
-    try:
-        target_repo.remotes.origin.push(refspec=f'{target_branch}:{target_branch}')
-        print(f"Successfully pushed the merged changes to '{target_branch}'")
-    except git.exc.GitCommandError as e:
-        print(f"Error during push: {e.stderr}")
-        return
-
-    # Remove the source remote
-    target_repo.delete_remote('source_repo')
-    print("Removed source repository remote")
+    if merge_branches(target_repo, f'source_repo/{source_branch}', target_branch):
+        # Push the changes to the target repository
+        if push_changes(target_repo, target_branch):
+            # Remove the source remote
+            remove_remote(target_repo, 'source_repo')
 
 if __name__ == "__main__":
     main()
