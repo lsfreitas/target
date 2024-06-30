@@ -1,4 +1,5 @@
 import os
+import requests
 import git
 
 def configure_git_identity():
@@ -41,8 +42,8 @@ def merge_branches(repo, source_branch, target_branch):
         print(f"Error during merge: {e.stderr}")
         print(f"stdout: {e.stdout}")
         print(f"stderr: {e.stderr}")
-        return False
-    return True
+        return False, e.stderr
+    return True, ""
 
 def push_changes(repo, branch_name):
     try:
@@ -52,6 +53,22 @@ def push_changes(repo, branch_name):
         print(f"Error during push: {e.stderr}")
         return False
     return True
+
+def create_pull_request(github_token, repo_url, source_branch, target_branch, conflict_details):
+    repo_name = repo_url.split(":")[1].replace(".git", "")
+    api_url = f"https://api.github.com/repos/{repo_name}/pulls"
+    headers = {"Authorization": f"token {github_token}"}
+    data = {
+        "title": "Merge conflicts detected",
+        "head": source_branch,
+        "base": target_branch,
+        "body": f"Merge conflicts detected:\n\n{conflict_details}"
+    }
+    response = requests.post(api_url, headers=headers, json=data)
+    if response.status_code == 201:
+        print(f"Pull request created successfully: {response.json()['html_url']}")
+    else:
+        print(f"Failed to create pull request: {response.json()}")
 
 def remove_remote(repo, remote_name):
     repo.delete_remote(remote_name)
@@ -66,10 +83,11 @@ def main():
     source_repo_url = os.getenv('SOURCE_REPO_URL')
     target_branch = os.getenv('TARGET_BRANCH')
     source_branch = os.getenv('SOURCE_BRANCH')
+    github_token = os.getenv('GITHUB_TOKEN')
 
     # Validate environment variables
-    if not target_repo_url or not source_repo_url or not target_branch or not source_branch:
-        print("Error: TARGET_REPO_URL, SOURCE_REPO_URL, TARGET_BRANCH, and SOURCE_BRANCH environment variables must be set.")
+    if not target_repo_url or not source_repo_url or not target_branch or not source_branch or not github_token:
+        print("Error: TARGET_REPO_URL, SOURCE_REPO_URL, TARGET_BRANCH, SOURCE_BRANCH, and GITHUB_TOKEN environment variables must be set.")
         return
 
     # Define local paths for cloning repositories
@@ -97,11 +115,17 @@ def main():
         return
 
     # Merge the source repository into the target repository
-    if merge_branches(target_repo, f'source_repo/{source_branch}', target_branch):
-        # Push the changes to the target repository
-        if push_changes(target_repo, target_branch):
-            # Remove the source remote
-            remove_remote(target_repo, 'source_repo')
+    merge_success, conflict_details = merge_branches(target_repo, f'source_repo/{source_branch}', target_branch)
+    if not merge_success:
+        # Create a pull request with the merge conflicts
+        create_pull_request(github_token, target_repo_url, source_branch, target_branch, conflict_details)
+        remove_remote(target_repo, 'source_repo')
+        return
+
+    # Push the changes to the target repository
+    if push_changes(target_repo, target_branch):
+        # Remove the source remote
+        remove_remote(target_repo, 'source_repo')
 
 if __name__ == "__main__":
     main()
