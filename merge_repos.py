@@ -21,13 +21,23 @@ def create_remote(repo, remote_name, remote_url):
         repo.create_remote(remote_name, remote_url)
     repo.remotes[remote_name].fetch()
 
+def merge_source_into_target(target_repo, remote_name, branch_name):
+    try:
+        target_repo.git.merge(f"{remote_name}/main", allow_unrelated_histories=True)
+        target_repo.git.push("origin", branch_name)
+        return True
+    except git.exc.GitCommandError as e:
+        print(f"Merge conflict detected: {e}")
+        return False
+
 def main():
-    # Replace with your actual GitHub username. Can be set as env variable
+    # Target and Source repo can be set as env variable
     target_repo_url = "git@github.com:lsfreitas/target.git"
     source_repo_url = "git@github.com:lsfreitas/source.git"
     target_repo_path = "/tmp/target_repo"
     remote_name = "source_repo"
     tag_name = "last-merged-commit"
+    branch_name = "githubaction"
 
     target_repo = clone_repo(target_repo_url, target_repo_path)
     print(f"Repository cloned to {target_repo_path}")
@@ -43,6 +53,12 @@ def main():
     
     create_remote(target_repo, remote_name, source_repo_url)
     print(f"Remote '{remote_name}' created and fetched")
+
+    merge_success = merge_source_into_target(target_repo, remote_name, branch_name)
+    if merge_success:
+        print(f"Successfully merged '{remote_name}/main' into '{branch_name}'")
+    else:
+        print(f"Failed to merge '{remote_name}/main' into '{branch_name}' due to conflicts")
 
 if __name__ == "__main__":
     main()
