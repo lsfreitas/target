@@ -34,7 +34,8 @@ def merge_source_into_target(target_repo, remote_name, branch_name):
         print(f"Successfully merged '{remote_name}/main' into '{branch_name}'")
         return True
     except git.exc.GitCommandError as e:
-        print(f"Error during merge: {e}")
+        print(f"Error during merge: {e.stderr}")
+        # Handle conflicts or other errors
         return False
 
 def main():
@@ -66,7 +67,7 @@ def main():
 
     merge_success = merge_source_into_target(target_repo, remote_name, branch_name)
     if not merge_success:
-        print(f"Failed to merge '{remote_name}/main' into '{branch_name}' due to conflicts or other errors")
+        print(f"Failed to merge '{remote_name}/main' into '{branch_name}' due to errors. Please check the error messages above for details.")
 
 if __name__ == "__main__":
     main()
