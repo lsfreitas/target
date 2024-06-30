@@ -29,6 +29,10 @@ def checkout_branch(repo, branch_name):
     repo.git.checkout(branch_name)
     print(f"Checked out to branch '{branch_name}'")
 
+def create_new_branch(repo, branch_name):
+    repo.git.checkout('-b', branch_name)
+    print(f"Created and checked out to new branch '{branch_name}'")
+
 def get_latest_commit_hash(repo, remote_name, branch_name):
     remote_branch = f"{remote_name}/{branch_name}"
     fetch_remote(repo, remote_name)
@@ -117,8 +121,12 @@ def main():
     # Merge the source repository into the target repository
     merge_success, conflict_details = merge_branches(target_repo, f'source_repo/{source_branch}', target_branch)
     if not merge_success:
+        # Create a new branch for the merge conflict
+        conflict_branch = "merge-conflict-" + latest_source_commit[:7]
+        create_new_branch(target_repo, conflict_branch)
+        push_changes(target_repo, conflict_branch)
         # Create a pull request with the merge conflicts
-        create_pull_request(github_token, target_repo_url, source_branch, target_branch, conflict_details)
+        create_pull_request(github_token, target_repo_url, conflict_branch, target_branch, conflict_details)
         remove_remote(target_repo, 'source_repo')
         return
 
