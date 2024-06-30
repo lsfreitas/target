@@ -31,12 +31,12 @@ def merge_source_into_target(target_repo, remote_name, branch_name):
     try:
         print("Attempting to merge...")
         target_repo.git.merge(f"{remote_name}/main", allow_unrelated_histories=True)
-        target_repo.git.push("origin", branch_name)
         print(f"Successfully merged '{remote_name}/main' into '{branch_name}'")
+        target_repo.git.push("origin", branch_name)
         return True
     except git.exc.GitCommandError as e:
         print(f"Error during merge: {e.stderr}")
-        # Additional error information
+        # Handle conflicts or other errors
         print(f"stdout: {e.stdout}")
         print(f"stderr: {e.stderr}")
         return False
