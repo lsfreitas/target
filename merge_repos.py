@@ -43,8 +43,9 @@ def get_latest_commit_hash(repo, remote_name, branch_name):
     remote_branch = f"{remote_name}/{branch_name}"
     return repo.git.rev_parse(f"refs/remotes/{remote_branch}")
 
-def compare_commit_hashes(source_hash, target_hash):
-    return source_hash != target_hash
+def get_commits_to_merge(repo, source_branch, target_branch):
+    commits = repo.git.rev_list(f"{target_branch}..{source_branch}").split('\n')
+    return [commit for commit in commits if commit]
 
 def merge_branches(repo, source_branch, target_branch):
     try:
@@ -132,12 +133,11 @@ def main():
     # Checkout the target branch
     checkout_branch(target_repo, target_branch)
 
-    # Get latest commit hashes
-    latest_source_commit = get_latest_commit_hash(target_repo, 'source_repo', source_branch)
-    latest_target_commit = get_latest_commit_hash(target_repo, 'origin', target_branch)
+    # Get the list of commits to merge
+    commits_to_merge = get_commits_to_merge(target_repo, f'source_repo/{source_branch}', target_branch)
 
-    # Compare the commit hashes to determine if there are new changes to merge
-    if not compare_commit_hashes(latest_source_commit, latest_target_commit):
+    # Check if there are new changes in the source repository
+    if not commits_to_merge:
         print("No new changes to merge from source repository.")
         remove_remote(target_repo, 'source_repo')
         return
@@ -146,7 +146,7 @@ def main():
     merge_success, conflict_details = merge_branches(target_repo, f'source_repo/{source_branch}', target_branch)
     if not merge_success:
         # Create a new branch for the merge conflict
-        conflict_branch = "merge-conflict-" + latest_source_commit[:7]
+        conflict_branch = "merge-conflict-" + commits_to_merge[0][:7]
         create_new_branch(target_repo, conflict_branch)
         commit_merge_conflict(target_repo, "Resolve merge conflicts")
         push_changes(target_repo, conflict_branch)
