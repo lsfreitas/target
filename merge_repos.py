@@ -1,5 +1,5 @@
 import os
-import git # type: ignore
+import git
 
 def configure_git_identity():
     user_name = os.getenv('GIT_USER_NAME')
@@ -14,6 +14,11 @@ def clone_repo(repo_url, repo_path):
         repo = git.Repo(repo_path)
         repo.remotes.origin.pull()
         return repo
+
+def print_repo_status(repo, repo_path):
+    print(f"Repository at {repo_path}")
+    print(f"Current branch: {repo.active_branch}")
+    print(f"Latest commit: {repo.head.commit.hexsha}")
 
 def main():
     # Configure Git user identity
@@ -35,18 +40,23 @@ def main():
     # Clone both repositories
     target_repo = clone_repo(target_repo_url, target_repo_path)
     print(f"Target repository cloned to {target_repo_path}")
+    print_repo_status(target_repo, target_repo_path)
 
     source_repo = clone_repo(source_repo_url, source_repo_path)
     print(f"Source repository cloned to {source_repo_path}")
+    print_repo_status(source_repo, source_repo_path)
 
     # Ensure we are on the target branch
     target_repo.git.checkout(branch_name)
+    print(f"Checked out to branch '{branch_name}' in target repository")
 
     # Add the source repository as a remote to the target repository using its remote URL
     if 'source_repo' not in [remote.name for remote in target_repo.remotes]:
         target_repo.create_remote('source_repo', source_repo_url)
-    
+        print(f"Added source repository as remote 'source_repo'")
+
     target_repo.remotes.source_repo.fetch()
+    print(f"Fetched latest changes from source repository")
 
     # Merge the source repository into the target repository
     try:
@@ -54,6 +64,8 @@ def main():
         print(f"Successfully merged 'source_repo/main' into '{branch_name}'")
     except git.exc.GitCommandError as e:
         print(f"Error during merge: {e.stderr}")
+        print(f"stdout: {e.stdout}")
+        print(f"stderr: {e.stderr}")
         return
 
     # Push the changes to the target repository
