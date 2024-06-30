@@ -1,5 +1,4 @@
 import os
-import requests
 import git
 
 def configure_git_identity():
@@ -29,15 +28,10 @@ def checkout_branch(repo, branch_name):
     repo.git.checkout(branch_name)
     print(f"Checked out to branch '{branch_name}'")
 
-def get_latest_commit_from_github(repo_url, branch_name, token):
-    api_url = f"https://api.github.com/repos/{repo_url}/commits/{branch_name}"
-    headers = {"Authorization": f"token {token}"}
-    response = requests.get(api_url, headers=headers)
-    response.raise_for_status()
-    return response.json()['sha']
-
-def get_latest_commit_hash(repo, branch_name):
-    return repo.git.rev_parse(f'{branch_name}')
+def get_latest_commit_hash(repo, remote_name, branch_name):
+    remote_branch = f"{remote_name}/{branch_name}"
+    fetch_remote(repo, remote_name)
+    return repo.git.rev_parse(f"refs/remotes/{remote_branch}")
 
 def merge_branches(repo, source_branch, target_branch):
     try:
@@ -72,11 +66,10 @@ def main():
     source_repo_url = os.getenv('SOURCE_REPO_URL')
     target_branch = os.getenv('TARGET_BRANCH')
     source_branch = os.getenv('SOURCE_BRANCH')
-    github_token = os.getenv('GITHUB_TOKEN')
 
     # Validate environment variables
-    if not target_repo_url or not source_repo_url or not target_branch or not source_branch or not github_token:
-        print("Error: TARGET_REPO_URL, SOURCE_REPO_URL, TARGET_BRANCH, SOURCE_BRANCH, and GITHUB_TOKEN environment variables must be set.")
+    if not target_repo_url or not source_repo_url or not target_branch or not source_branch:
+        print("Error: TARGET_REPO_URL, SOURCE_REPO_URL, TARGET_BRANCH, and SOURCE_BRANCH environment variables must be set.")
         return
 
     # Define local paths for cloning repositories
@@ -90,18 +83,15 @@ def main():
     # Add the source repository as a remote to the target repository
     add_remote(target_repo, 'source_repo', source_repo_url)
 
-    # Fetch changes from the source repository
-    fetch_remote(target_repo, 'source_repo')
-
     # Checkout the target branch
     checkout_branch(target_repo, target_branch)
 
     # Get latest commit hashes
-    latest_source_commit = get_latest_commit_from_github(source_repo_url, source_branch, github_token)
-    target_commit_hash = get_latest_commit_hash(target_repo, target_branch)
+    latest_source_commit = get_latest_commit_hash(target_repo, 'source_repo', source_branch)
+    latest_target_commit = get_latest_commit_hash(target_repo, 'origin', target_branch)
 
-    # Check if there are changes in the source repository
-    if target_commit_hash == latest_source_commit:
+    # Check if there are new changes in the source repository
+    if latest_source_commit in target_repo.git.log('--pretty=%H').split('\n'):
         print("No new changes to merge from source repository.")
         remove_remote(target_repo, 'source_repo')
         return
