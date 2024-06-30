@@ -11,14 +11,7 @@ def clone_repo(repo_url, repo_path):
     if not os.path.exists(repo_path):
         return git.Repo.clone_from(repo_url, repo_path)
     else:
-        repo = git.Repo(repo_path)
-        repo.remotes.origin.pull()
-        return repo
-
-def print_repo_status(repo, repo_path):
-    print(f"Repository at {repo_path}")
-    print(f"Current branch: {repo.active_branch}")
-    print(f"Latest commit: {repo.head.commit.hexsha}")
+        return git.Repo(repo_path)
 
 def main():
     # Configure Git user identity
@@ -31,20 +24,20 @@ def main():
     # Define local paths for cloning repositories
     target_repo_path = "/tmp/target_repo"
     source_repo_path = "/tmp/source_repo"
-    branch_name = "githubaction"
+    branch_name = "main"  # Change this if you want to merge into a different branch
 
     if not target_repo_url or not source_repo_url:
         print("Error: TARGET_REPO_URL and SOURCE_REPO_URL environment variables must be set.")
         return
 
     # Clone both repositories
+    print(f"Cloning target repository from {target_repo_url} to {target_repo_path}")
     target_repo = clone_repo(target_repo_url, target_repo_path)
     print(f"Target repository cloned to {target_repo_path}")
-    print_repo_status(target_repo, target_repo_path)
 
+    print(f"Cloning source repository from {source_repo_url} to {source_repo_path}")
     source_repo = clone_repo(source_repo_url, source_repo_path)
     print(f"Source repository cloned to {source_repo_path}")
-    print_repo_status(source_repo, source_repo_path)
 
     # Ensure we are on the target branch
     target_repo.git.checkout(branch_name)
