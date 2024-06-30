@@ -31,15 +31,16 @@ def merge_source_into_target(target_repo, remote_name, branch_name):
     try:
         target_repo.git.merge(f"{remote_name}/main", allow_unrelated_histories=True)
         target_repo.git.push("origin", branch_name)
+        print(f"Successfully merged '{remote_name}/main' into '{branch_name}'")
         return True
     except git.exc.GitCommandError as e:
-        print(f"Merge conflict detected: {e}")
+        print(f"Error during merge: {e}")
         return False
 
 def main():
     # Configure Git user identity
     configure_git_identity()
-    
+
     # Target and Source repo can be set as env variable
     target_repo_url = "git@github.com:lsfreitas/target.git"
     source_repo_url = "git@github.com:lsfreitas/source.git"
@@ -64,10 +65,8 @@ def main():
     print(f"Remote '{remote_name}' created and fetched")
 
     merge_success = merge_source_into_target(target_repo, remote_name, branch_name)
-    if merge_success:
-        print(f"Successfully merged '{remote_name}/main' into '{branch_name}'")
-    else:
-        print(f"Failed to merge '{remote_name}/main' into '{branch_name}' due to conflicts")
+    if not merge_success:
+        print(f"Failed to merge '{remote_name}/main' into '{branch_name}' due to conflicts or other errors")
 
 if __name__ == "__main__":
     main()
