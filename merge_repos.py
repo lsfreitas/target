@@ -16,10 +16,17 @@ def get_last_merged_commit(repo, tag_name):
     except git.exc.GitCommandError:
         return None
 
+def create_remote(repo, remote_name, remote_url):
+    if remote_name not in [remote.name for remote in repo.remotes]:
+        repo.create_remote(remote_name, remote_url)
+    repo.remotes[remote_name].fetch()
+
 def main():
     # Replace with your actual GitHub username. Can be set as env variable
     target_repo_url = "git@github.com:lsfreitas/target.git"
+    source_repo_url = "git@github.com:lsfreitas/source.git"
     target_repo_path = "/tmp/target_repo"
+    remote_name = "source_repo"
     tag_name = "last-merged-commit"
 
     target_repo = clone_repo(target_repo_url, target_repo_path)
@@ -33,6 +40,9 @@ def main():
         print(f"Last merged commit hash: {last_merged_commit}")
     else:
         print(f"No tag '{tag_name}' found in the repository")
+    
+    create_remote(target_repo, remote_name, source_repo_url)
+    print(f"Remote '{remote_name}' created and fetched")
 
 if __name__ == "__main__":
     main()
