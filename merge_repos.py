@@ -43,6 +43,9 @@ def get_latest_commit_hash(repo, remote_name, branch_name):
     remote_branch = f"{remote_name}/{branch_name}"
     return repo.git.rev_parse(f"refs/remotes/{remote_branch}")
 
+def compare_commit_hashes(source_hash, target_hash):
+    return source_hash != target_hash
+
 def merge_branches(repo, source_branch, target_branch):
     try:
         repo.git.merge(source_branch, allow_unrelated_histories=True)
@@ -133,8 +136,8 @@ def main():
     latest_source_commit = get_latest_commit_hash(target_repo, 'source_repo', source_branch)
     latest_target_commit = get_latest_commit_hash(target_repo, 'origin', target_branch)
 
-    # Check if there are new changes in the source repository
-    if latest_source_commit == latest_target_commit:
+    # Compare the commit hashes to determine if there are new changes to merge
+    if not compare_commit_hashes(latest_source_commit, latest_target_commit):
         print("No new changes to merge from source repository.")
         remove_remote(target_repo, 'source_repo')
         return
