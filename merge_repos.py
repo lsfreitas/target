@@ -8,9 +8,12 @@ def configure_git_identity():
     os.system(f'git config --global user.email "{user_email}"')
 
 def clone_repo(repo_url, repo_path):
-    if not os.path.exists(repo_path):
-        git.Repo.clone_from(repo_url, repo_path)
-    return git.Repo(repo_path)
+    if os.path.exists(repo_path):
+        repo = git.Repo(repo_path)
+        repo.remotes.origin.pull()
+    else:
+        repo = git.Repo.clone_from(repo_url, repo_path)
+    return repo
 
 def fetch_latest_commit(repo):
     repo.remotes.origin.fetch()
@@ -31,14 +34,11 @@ def merge_source_into_target(target_repo, remote_name, branch_name):
     try:
         print("Attempting to merge...")
         target_repo.git.merge(f"{remote_name}/main", allow_unrelated_histories=True)
-        print(f"Successfully merged '{remote_name}/main' into '{branch_name}'")
         target_repo.git.push("origin", branch_name)
+        print(f"Successfully merged '{remote_name}/main' into '{branch_name}'")
         return True
     except git.exc.GitCommandError as e:
         print(f"Error during merge: {e.stderr}")
-        # Handle conflicts or other errors
-        print(f"stdout: {e.stdout}")
-        print(f"stderr: {e.stderr}")
         return False
 
 def main():
