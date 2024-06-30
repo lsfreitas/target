@@ -1,6 +1,12 @@
 import os
 import git # type: ignore
 
+def configure_git_identity():
+    user_name = os.getenv('GIT_USER_NAME')
+    user_email = os.getenv('GIT_USER_EMAIL')
+    os.system(f'git config --global user.name "{user_name}"')
+    os.system(f'git config --global user.email "{user_email}"')
+
 def clone_repo(repo_url, repo_path):
     if not os.path.exists(repo_path):
         git.Repo.clone_from(repo_url, repo_path)
@@ -31,6 +37,9 @@ def merge_source_into_target(target_repo, remote_name, branch_name):
         return False
 
 def main():
+    # Configure Git user identity
+    configure_git_identity()
+    
     # Target and Source repo can be set as env variable
     target_repo_url = "git@github.com:lsfreitas/target.git"
     source_repo_url = "git@github.com:lsfreitas/source.git"
