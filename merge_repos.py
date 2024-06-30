@@ -1,5 +1,5 @@
 import os
-import git
+import git # type: ignore
 
 def configure_git_identity():
     user_name = os.getenv('GIT_USER_NAME')
