@@ -21,9 +21,10 @@ def add_remote(repo, remote_name, remote_url):
         repo.create_remote(remote_name, remote_url)
         print(f"Added {remote_name} as remote with URL {remote_url}")
 
-def fetch_remote(repo, remote_name):
-    repo.remotes[remote_name].fetch()
-    print(f"Fetched latest changes from {remote_name}")
+def fetch_all(repo):
+    for remote in repo.remotes:
+        remote.fetch()
+    print("Fetched all remotes")
 
 def checkout_branch(repo, branch_name):
     repo.git.checkout(branch_name)
@@ -38,14 +39,9 @@ def commit_merge_conflict(repo, conflict_message):
     repo.index.commit(conflict_message)
     print("Committed merge conflict changes")
 
-def get_latest_commit_hash(repo, remote_name, branch_name):
-    fetch_remote(repo, remote_name)
-    remote_branch = f"{remote_name}/{branch_name}"
-    return repo.git.rev_parse(f"refs/remotes/{remote_branch}")
-
 def get_commits_to_merge(repo, source_branch, target_branch):
     try:
-        commits = repo.git.rev_list(f"refs/remotes/{source_branch}..refs/remotes/{target_branch}").split('\n')
+        commits = repo.git.rev_list(f"{target_branch}..{source_branch}").split('\n')
         return [commit for commit in commits if commit]
     except git.exc.GitCommandError as e:
         print(f"Error during commit comparison: {e.stderr}")
@@ -134,11 +130,14 @@ def main():
     # Add the source repository as a remote to the target repository
     add_remote(target_repo, 'source_repo', source_repo_url)
 
+    # Fetch all branches from both repositories
+    fetch_all(target_repo)
+
     # Checkout the target branch
     checkout_branch(target_repo, target_branch)
 
     # Get the list of commits to merge
-    commits_to_merge = get_commits_to_merge(target_repo, f'source_repo/{source_branch}', target_branch)
+    commits_to_merge = get_commits_to_merge(target_repo, f'source_repo/{source_branch}', f'origin/{target_branch}')
 
     # Check if there are new changes in the source repository
     if not commits_to_merge:
@@ -147,7 +146,7 @@ def main():
         return
 
     # Merge the source repository into the target repository
-    merge_success, conflict_details = merge_branches(target_repo, f'refs/remotes/source_repo/{source_branch}', target_branch)
+    merge_success, conflict_details = merge_branches(target_repo, f'source_repo/{source_branch}', target_branch)
     if not merge_success:
         # Create a new branch for the merge conflict
         conflict_branch = "merge-conflict-" + commits_to_merge[0][:7]
