@@ -39,8 +39,8 @@ def commit_merge_conflict(repo, conflict_message):
     print("Committed merge conflict changes")
 
 def get_latest_commit_hash(repo, remote_name, branch_name):
-    remote_branch = f"{remote_name}/{branch_name}"
     fetch_remote(repo, remote_name)
+    remote_branch = f"{remote_name}/{branch_name}"
     return repo.git.rev_parse(f"refs/remotes/{remote_branch}")
 
 def merge_branches(repo, source_branch, target_branch):
@@ -83,7 +83,7 @@ def remove_remote(repo, remote_name):
     repo.delete_remote(remote_name)
     print(f"Removed remote '{remote_name}'")
 
-def check_for_existing_conflict_branch(repo, base_branch, conflict_prefix="merge-conflict-"):
+def check_for_existing_conflict_branch(repo, conflict_prefix="merge-conflict-"):
     branches = repo.git.branch('-r').split('\n')
     conflict_branch = None
     for branch in branches:
@@ -118,7 +118,7 @@ def main():
     print(f"Target repository cloned to {target_repo_path}")
 
     # Check for existing conflict branch
-    existing_conflict_branch = check_for_existing_conflict_branch(target_repo, target_branch)
+    existing_conflict_branch = check_for_existing_conflict_branch(target_repo)
     if existing_conflict_branch:
         print(f"Unresolved conflicts in branch {existing_conflict_branch}. Please resolve conflicts before merging.")
         return
@@ -134,7 +134,7 @@ def main():
     latest_target_commit = get_latest_commit_hash(target_repo, 'origin', target_branch)
 
     # Check if there are new changes in the source repository
-    if latest_source_commit in target_repo.git.log('--pretty=%H').split('\n'):
+    if latest_source_commit == latest_target_commit:
         print("No new changes to merge from source repository.")
         remove_remote(target_repo, 'source_repo')
         return
