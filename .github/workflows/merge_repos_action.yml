@@ -2,6 +2,8 @@ name: Merge Repos Action
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *"
 
 jobs:
   run-script:
@@ -35,7 +37,7 @@ jobs:
           GIT_USER_EMAIL: "luisfreitas440@gmail.com"
           TARGET_REPO_URL: "git@github.com:lsfreitas/target.git"
           SOURCE_REPO_URL: "git@github.com:lsfreitas/source.git"
-          TARGET_BRANCH: "githubaction"
+          TARGET_BRANCH: "main"
           SOURCE_BRANCH: "main"
         run: |
           python merge_repos.py
