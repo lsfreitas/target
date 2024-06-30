@@ -44,8 +44,12 @@ def get_latest_commit_hash(repo, remote_name, branch_name):
     return repo.git.rev_parse(f"refs/remotes/{remote_branch}")
 
 def get_commits_to_merge(repo, source_branch, target_branch):
-    commits = repo.git.rev_list(f"{target_branch}..{source_branch}").split('\n')
-    return [commit for commit in commits if commit]
+    try:
+        commits = repo.git.rev_list(f"refs/remotes/{source_branch}..refs/remotes/{target_branch}").split('\n')
+        return [commit for commit in commits if commit]
+    except git.exc.GitCommandError as e:
+        print(f"Error during commit comparison: {e.stderr}")
+        return []
 
 def merge_branches(repo, source_branch, target_branch):
     try:
@@ -143,7 +147,7 @@ def main():
         return
 
     # Merge the source repository into the target repository
-    merge_success, conflict_details = merge_branches(target_repo, f'source_repo/{source_branch}', target_branch)
+    merge_success, conflict_details = merge_branches(target_repo, f'refs/remotes/source_repo/{source_branch}', target_branch)
     if not merge_success:
         # Create a new branch for the merge conflict
         conflict_branch = "merge-conflict-" + commits_to_merge[0][:7]
