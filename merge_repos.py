@@ -83,6 +83,16 @@ def remove_remote(repo, remote_name):
     repo.delete_remote(remote_name)
     print(f"Removed remote '{remote_name}'")
 
+def check_for_existing_conflict_branch(repo, base_branch, conflict_prefix="merge-conflict-"):
+    branches = repo.git.branch('-r').split('\n')
+    conflict_branch = None
+    for branch in branches:
+        branch = branch.strip()
+        if branch.startswith(f'origin/{conflict_prefix}'):
+            conflict_branch = branch.split('/')[-1]
+            break
+    return conflict_branch
+
 def main():
     # Configure Git user identity
     configure_git_identity()
@@ -106,6 +116,12 @@ def main():
     # Clone target repository
     target_repo = clone_repo(target_repo_url, target_repo_path)
     print(f"Target repository cloned to {target_repo_path}")
+
+    # Check for existing conflict branch
+    existing_conflict_branch = check_for_existing_conflict_branch(target_repo, target_branch)
+    if existing_conflict_branch:
+        print(f"Unresolved conflicts in branch {existing_conflict_branch}. Please resolve conflicts before merging.")
+        return
 
     # Add the source repository as a remote to the target repository
     add_remote(target_repo, 'source_repo', source_repo_url)
