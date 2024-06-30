@@ -8,12 +8,10 @@ def configure_git_identity():
     os.system(f'git config --global user.email "{user_email}"')
 
 def clone_repo(repo_url, repo_path):
-    if os.path.exists(repo_path):
-        repo = git.Repo(repo_path)
-        repo.remotes.origin.pull()
+    if not os.path.exists(repo_path):
+        return git.Repo.clone_from(repo_url, repo_path)
     else:
-        repo = git.Repo.clone_from(repo_url, repo_path)
-    return repo
+        return git.Repo(repo_path)
 
 def fetch_latest_commit(repo):
     repo.remotes.origin.fetch()
@@ -49,28 +47,36 @@ def main():
     target_repo_url = "git@github.com:lsfreitas/target.git"
     source_repo_url = "git@github.com:lsfreitas/source.git"
     target_repo_path = "/tmp/target_repo"
-    remote_name = "source_repo"
-    tag_name = "last-merged-commit"
+    source_repo_path = "/tmp/source_repo"
     branch_name = "githubaction"
 
+    # Clone both repositories
     target_repo = clone_repo(target_repo_url, target_repo_path)
-    print(f"Repository cloned to {target_repo_path}")
+    print(f"Target repository cloned to {target_repo_path}")
 
-    latest_commit = fetch_latest_commit(target_repo)
-    print(f"Latest commit hash: {latest_commit}")
+    source_repo = clone_repo(source_repo_url, source_repo_path)
+    print(f"Source repository cloned to {source_repo_path}")
 
-    last_merged_commit = get_last_merged_commit(target_repo, tag_name)
-    if last_merged_commit:
-        print(f"Last merged commit hash: {last_merged_commit}")
-    else:
-        print(f"No tag '{tag_name}' found in the repository")
+    # Fetch the latest changes in target repo
+    target_repo.git.checkout(branch_name)
+    target_repo.remotes.origin.pull()
+
+    # Add the source repository as a remote to the target repository using its local path
+    if 'source_repo' not in [remote.name for remote in target_repo.remotes]:
+        target_repo.create_remote('source_repo', source_repo.working_dir)
     
-    create_remote(target_repo, remote_name, source_repo_url)
-    print(f"Remote '{remote_name}' created and fetched")
+    target_repo.remotes.source_repo.fetch()
 
-    merge_success = merge_source_into_target(target_repo, remote_name, branch_name)
-    if not merge_success:
-        print(f"Failed to merge '{remote_name}/main' into '{branch_name}' due to errors. Please check the error messages above for details.")
-
+    # Merge the source repository into the target repository
+    try:
+        target_repo.git.merge('source_repo/main', allow_unrelated_histories=True)
+        target_repo.git.push("origin", branch_name)
+        print(f"Successfully merged 'source_repo/main' into '{branch_name}'")
+    except git.exc.GitCommandError as e:
+        print(f"Error during merge: {e.stderr}")
+        print(f"stdout: {e.stdout}")
+        print(f"stderr: {e.stderr}")
+        return
+    
 if __name__ == "__main__":
     main()
