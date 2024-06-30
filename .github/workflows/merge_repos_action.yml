@@ -33,5 +33,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
           GIT_USER_NAME: "lsfreitas"
           GIT_USER_EMAIL: "luisfreitas440@gmail.com"
+          TARGET_REPO_URL: "git@github.com:lsfreitas/target.git"
+          SOURCE_REPO_URL: "git@github.com:lsfreitas/source.git"
         run: |
           python merge_repos.py
